@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Редактор теста: {{ test.title }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1 style="font-size:1.5rem;">{{ test.title }}</h1>
+    <p style="margin:0;">
+      <span class="badge {% if test.is_active == 'Y' %}badge-active{% else %}badge-draft{% endif %}">
+        {% if test.is_active == 'Y' %}Активен{% else %}Черновик{% endif %}
+      </span>
+      &nbsp;{{ builder_qs|length }} вопросов в тесте
+    </p>
+  </div>
+  <div class="page-header-actions">
+    {% if test.is_active == 'Y' %}
+      <form method="POST" action="{{ url_for('author_unpublish', test_id=test.id_test) }}" style="display:inline;">
+        <button class="btn btn-ghost btn-sm">Снять с публикации</button>
+      </form>
+      <a href="{{ url_for('test_detail', test_id=test.id_test) }}" class="btn btn-ghost btn-sm" target="_blank">Просмотр →</a>
+    {% else %}
+      <form method="POST" action="{{ url_for('author_publish', test_id=test.id_test) }}" style="display:inline;">
+        <button class="btn btn-success btn-sm">▶ Опубликовать</button>
+      </form>
+    {% endif %}
+    <a href="{{ url_for('test_stats_view', test_id=test.id_test) }}" class="btn btn-ghost btn-sm">Статистика</a>
+    <a href="{{ url_for('author_tests') }}" class="btn btn-ghost btn-sm">← Все тесты</a>
+  </div>
+</div>
+
+<!-- Stats -->
+{% if stats and stats.total_attempts %}
+<div class="stat-row" style="margin-bottom:1.5rem;">
+  <div class="stat-box"><div class="stat-val">{{ stats.total_attempts }}</div><div class="stat-label">Попыток</div></div>
+  <div class="stat-box"><div class="stat-val">{{ stats.passed or 0 }}</div><div class="stat-label">Зачётов</div></div>
+  <div class="stat-box"><div class="stat-val">{{ stats.failed or 0 }}</div><div class="stat-label">Незачётов</div></div>
+  {% if stats.avg_score %}<div class="stat-box"><div class="stat-val">{{ stats.avg_score }}</div><div class="stat-label">Ср. балл</div></div>{% endif %}
+</div>
+{% endif %}
+
+<div style="display:grid; grid-template-columns:1fr 380px; gap:1.5rem; align-items:start;">
+
+  <!-- Left: questions in test -->
+  <div>
+    <div class="section-title">Вопросы в тесте</div>
+
+    {% if builder_qs %}
+      <div style="display:flex; flex-direction:column; gap:0.5rem; margin-bottom:1.5rem;">
+        {% for q in builder_qs %}
+        <div class="card" style="padding:1rem; display:flex; align-items:flex-start; gap:0.75rem;">
+          <div style="font-family:'DM Mono',monospace; font-size:0.85rem; color:var(--muted); min-width:24px; margin-top:0.2rem; font-weight:600;">
+            {{ q.q_order or loop.index }}
+          </div>
+          <div style="flex:1;">
+            <div style="font-size:0.875rem; font-weight:500; margin-bottom:0.35rem;">
+              {{ q.q_text[:100] }}{% if q.q_text|length > 100 %}…{% endif %}
+            </div>
+            <div style="display:flex; gap:0.75rem; font-size:0.75rem; color:var(--muted); font-family:'DM Mono',monospace; flex-wrap:wrap;">
+              <span>{{ q.type_name }}</span>
+              <span>★ {{ q.difficulty }}</span>
+              <span>{{ q.score_weight or '?' }} балл.</span>
+            </div>
+          </div>
+          <form method="POST"
+                action="{{ url_for('author_remove_question_from_test', test_id=test.id_test, q_id=q.id_question) }}">
+            <button class="btn btn-danger btn-sm">✕</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty-state" style="padding:2rem;">
+        <p>Вопросов нет. Добавьте из банка справа.</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Right: question bank -->
+  <div>
+    <div class="section-title">Банк вопросов</div>
+    <div style="margin-bottom:0.75rem;">
+      <input type="text" id="q-search" placeholder="Поиск по тексту…"
+             oninput="filterQuestions(this.value)" style="font-size:0.875rem;">
+    </div>
+
+    <div style="max-height:600px; overflow-y:auto; display:flex; flex-direction:column; gap:0.5rem;" id="q-bank-list">
+      {% set added_ids = builder_qs | map(attribute='id_question') | list %}
+      {% for q in all_qs %}
+        {% if q.id_question not in added_ids %}
+        <div class="card q-bank-item" style="padding:0.75rem;" data-text="{{ q.q_text.lower() }}">
+          <div style="font-size:0.85rem; font-weight:500; margin-bottom:0.35rem; color:var(--text);">
+            {{ q.q_text[:80] }}{% if q.q_text|length > 80 %}…{% endif %}
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+            <div style="font-size:0.75rem; color:var(--muted); font-family:'DM Mono',monospace;">
+              {{ q.type_name }} · ★{{ q.difficulty }} · {{ q.max_score }} б.
+            </div>
+            <form method="POST" action="{{ url_for('author_add_question_to_test', test_id=test.id_test) }}"
+                  style="display:flex; gap:0.4rem; align-items:center;">
+              <input type="hidden" name="q_id" value="{{ q.id_question }}">
+              <input type="number" name="order" value="{{ builder_qs|length + 1 }}"
+                     min="1" style="width:50px; font-size:0.8rem; padding:0.3rem 0.5rem;">
+              <input type="number" name="weight" value="{{ q.max_score }}" step="0.5"
+                     min="0" style="width:55px; font-size:0.8rem; padding:0.3rem 0.5rem;">
+              <button class="btn btn-primary btn-sm">+</button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+      {% else %}
+        <div class="empty-state" style="padding:1.5rem;">
+          <p style="font-size:0.875rem;">Все вопросы уже в тесте.</p>
+          <a href="{{ url_for('author_question_new') }}" class="btn btn-primary btn-sm">Создать вопрос</a>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div style="margin-top:1rem;">
+      <a href="{{ url_for('author_question_new') }}" class="btn btn-ghost btn-sm" style="width:100%; justify-content:center;">
+        + Новый вопрос в банк
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+function filterQuestions(val) {
+  const q = val.toLowerCase();
+  document.querySelectorAll('.q-bank-item').forEach(el => {
+    el.style.display = el.dataset.text.includes(q) ? '' : 'none';
+  });
+}
+</script>
+
+{% endblock %}

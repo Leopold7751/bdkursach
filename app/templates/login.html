@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Вход — QuizPlatform{% endblock %}
+{% block content %}
+
+<div style="max-width:400px; margin:3rem auto;">
+  <h1 style="margin-bottom:0.25rem;">Вход</h1>
+  <p>Новый пользователь? <a href="{{ url_for('register') }}" style="color:var(--accent);">Зарегистрируйтесь</a></p>
+
+  <div class="card" style="margin-top:1.5rem;">
+    <form method="POST">
+      <div class="form-group">
+        <label>Логин</label>
+        <input type="text" name="login" placeholder="ваш_логин" required autofocus>
+      </div>
+      <div class="form-group">
+        <label>Пароль</label>
+        <input type="password" name="password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">Войти</button>
+    </form>
+    <hr class="divider" style="margin:1rem 0;">
+    <p style="font-size:0.8rem; color:var(--muted); margin:0;">
+      Демо: <span class="mono">admin / password</span> · <span class="mono">author1 / password</span> · <span class="mono">student1 / password</span>
+    </p>
+  </div>
+</div>
+
+{% endblock %}

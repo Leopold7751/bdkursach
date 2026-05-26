@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Тесты — QuizPlatform{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Каталог тестов</h1>
+    <p style="margin:0;">{{ tests|length }} активных тестов</p>
+  </div>
+</div>
+
+{% if tests %}
+  <div class="card-grid">
+    {% for t in tests %}
+    <div class="card" style="display:flex; flex-direction:column; gap:0.75rem;">
+      <div>
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.5rem;">
+          <h3 style="margin-bottom:0.25rem;">{{ t.title }}</h3>
+          <span class="badge badge-active">Активен</span>
+        </div>
+        {% if t.category %}<small style="color:var(--muted);">📁 {{ t.category }}</small>{% endif %}
+      </div>
+      {% if t.description %}
+        <p style="font-size:0.875rem; margin:0; color:var(--muted);">{{ t.description }}</p>
+      {% endif %}
+      <div style="display:flex; gap:1rem; font-size:0.8rem; color:var(--muted); font-family:'DM Mono',monospace; flex-wrap:wrap;">
+        <span>📝 {{ t.q_count }} вопр.</span>
+        {% if t.timer_min %}<span>⏱ {{ t.timer_min }} мин</span>{% endif %}
+        {% if t.passing_score %}<span>Порог: {{ t.passing_score }} / {{ t.max_score }}</span>{% endif %}
+        <span>👤 {{ t.author }}</span>
+      </div>
+      <div style="font-size:0.8rem; color:var(--muted);">{{ t.feedback_mode }}</div>
+      <div style="margin-top:auto;">
+        <a href="{{ url_for('test_detail', test_id=t.id_test) }}" class="btn btn-primary btn-sm">Подробнее →</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <p>Нет активных тестов.</p>
+  </div>
+{% endif %}
+
+{% endblock %}

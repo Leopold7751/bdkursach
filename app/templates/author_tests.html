@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Мои тесты — QuizPlatform{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Мои тесты</h1>
+    <p style="margin:0;">Управление тестами составителя</p>
+  </div>
+  <a href="{{ url_for('author_test_new') }}" class="btn btn-primary">+ Создать тест</a>
+</div>
+
+{% if tests %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Тест</th>
+          <th>Статус</th>
+          <th>Вопросов</th>
+          <th>Макс. балл</th>
+          <th>Порог</th>
+          <th>Таймер</th>
+          <th>ОС</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tests %}
+        <tr>
+          <td>
+            <strong>{{ t.title }}</strong>
+            {% if t.category %}<br><small style="color:var(--muted);">{{ t.category }}</small>{% endif %}
+          </td>
+          <td>
+            <span class="badge {% if t.is_active == 'Y' %}badge-active{% else %}badge-draft{% endif %}">
+              {% if t.is_active == 'Y' %}Активен{% else %}Черновик{% endif %}
+            </span>
+          </td>
+          <td class="mono">{{ t.q_count }}</td>
+          <td class="mono">{{ t.max_score }}</td>
+          <td class="mono">{{ t.passing_score or '—' }}</td>
+          <td class="mono">{{ t.timer_min ~ ' мин' if t.timer_min else '—' }}</td>
+          <td style="font-size:0.8rem; color:var(--muted);">{{ t.feedback_mode }}</td>
+          <td>
+            <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+              <a href="{{ url_for('author_test_edit', test_id=t.id_test) }}" class="btn btn-ghost btn-sm">Изменить</a>
+              {% if t.is_active == 'Y' %}
+                <form method="POST" action="{{ url_for('author_unpublish', test_id=t.id_test) }}" style="display:inline;">
+                  <button class="btn btn-ghost btn-sm">Снять</button>
+                </form>
+              {% else %}
+                <form method="POST" action="{{ url_for('author_publish', test_id=t.id_test) }}" style="display:inline;">
+                  <button class="btn btn-success btn-sm">Опубл.</button>
+                </form>
+              {% endif %}
+              <form method="POST" action="{{ url_for('author_delete_test', test_id=t.id_test) }}"
+                    onsubmit="return confirm('Удалить тест «{{ t.title }}»?')" style="display:inline;">
+                <button class="btn btn-danger btn-sm">Удалить</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="empty-state">
+    <div class="empty-icon">📝</div>
+    <p>Нет тестов. Создайте первый!</p>
+    <a href="{{ url_for('author_test_new') }}" class="btn btn-primary">Создать тест</a>
+  </div>
+{% endif %}
+
+{% endblock %}

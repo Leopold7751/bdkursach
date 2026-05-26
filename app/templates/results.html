@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}Результаты — {{ attempt.test_title }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Результаты теста</h1>
+    <p style="margin:0;">{{ attempt.test_title }}</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{{ url_for('my_attempts') }}" class="btn btn-ghost btn-sm">← Мои попытки</a>
+    {% if attempt.status_code == 'COMPLETED' %}
+      <a href="{{ url_for('test_detail', test_id=attempt.id_test) }}" class="btn btn-ghost btn-sm">Пройти снова</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Score card -->
+<div class="card" style="margin-bottom:1.5rem; text-align:center; padding:2.5rem;">
+  {% if attempt.result_code == 'PASS' %}
+    <div style="font-size:4rem; margin-bottom:0.5rem;">🎉</div>
+    <div style="font-family:'Syne',sans-serif; font-size:2.5rem; font-weight:800; color:var(--success); margin-bottom:0.5rem;">ЗАЧЁТ</div>
+  {% elif attempt.result_code == 'FAIL' %}
+    <div style="font-size:4rem; margin-bottom:0.5rem;">📉</div>
+    <div style="font-family:'Syne',sans-serif; font-size:2.5rem; font-weight:800; color:var(--danger); margin-bottom:0.5rem;">НЕЗАЧЁТ</div>
+  {% else %}
+    <div style="font-size:4rem; margin-bottom:0.5rem;">📊</div>
+    <div style="font-family:'Syne',sans-serif; font-size:2rem; font-weight:800; color:var(--muted); margin-bottom:0.5rem;">Завершено</div>
+  {% endif %}
+
+  <div style="font-family:'Syne',sans-serif; font-size:4rem; font-weight:800; color:var(--accent); line-height:1; margin-bottom:0.5rem;">
+    {{ attempt.score or 0 }}
+    <span style="font-size:1.5rem; color:var(--muted);">/ {{ attempt.max_score }}</span>
+  </div>
+
+  {% if attempt.passing_score %}
+  <div style="max-width:300px; margin:1rem auto 0;">
+    <div class="progress-bar">
+      <div class="progress-fill"
+           style="width:{{ [(attempt.score or 0) / attempt.max_score * 100, 100]|min }}%"></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:0.75rem; color:var(--muted); margin-top:0.4rem; font-family:'DM Mono',monospace;">
+      <span>0</span>
+      <span style="color:var(--warning);">Порог: {{ attempt.passing_score }}</span>
+      <span>{{ attempt.max_score }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <div style="margin-top:1.5rem; display:flex; justify-content:center; gap:2rem; flex-wrap:wrap;">
+    <div>
+      <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">Студент</div>
+      <div style="font-weight:600;">{{ attempt.student_name }}</div>
+    </div>
+    <div>
+      <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">Начало</div>
+      <div class="mono" style="font-size:0.875rem;">{{ attempt.start_time.strftime('%d.%m.%Y %H:%M') if attempt.start_time else '—' }}</div>
+    </div>
+    {% if attempt.end_time %}
+    <div>
+      <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">Окончание</div>
+      <div class="mono" style="font-size:0.875rem;">{{ attempt.end_time.strftime('%d.%m.%Y %H:%M') }}</div>
+    </div>
+    {% endif %}
+    {% if attempt.reason_code %}
+    <div>
+      <div style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">Завершено</div>
+      <div style="font-size:0.875rem;">{{ attempt.reason_code }}</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Detailed breakdown -->
+{% if details %}
+  <h2 style="margin-bottom:1rem;">Разбор ответов</h2>
+
+  {% for d in details %}
+  <div class="card" style="margin-bottom:1rem; border-left:3px solid {% if d.is_correct == 'Y' %}var(--success){% else %}var(--danger){% endif %};">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:0.75rem;">
+      <div style="font-size:0.75rem; color:var(--muted); font-family:'DM Mono',monospace; text-transform:uppercase; letter-spacing:0.06em;">
+        {{ d.q_type }} &nbsp;·&nbsp; +{{ d.points_earned }} / {{ d.max_score }} баллов
+      </div>
+      <span class="badge {% if d.is_correct == 'Y' %}badge-pass{% else %}badge-fail{% endif %}">
+        {% if d.is_correct == 'Y' %}✓ Верно{% else %}✗ Неверно{% endif %}
+      </span>
+    </div>
+
+    <div style="font-weight:500; margin-bottom:1rem; color:var(--text);">{{ d.q_text }}</div>
+
+    {% if d.q_type in ('SINGLE', 'MULTI') and d.all_options is defined %}
+      <div style="display:flex; flex-direction:column; gap:0.4rem;">
+        {% for opt in d.all_options %}
+          {# MULTI: выбранные id хранятся CSV в answer_text; SINGLE: id_option #}
+          {% if d.q_type == 'MULTI' %}
+            {% set is_selected = d.answer_text and (opt.id_option|string) in d.answer_text.split(',') %}
+          {% else %}
+            {% set is_selected = opt.id_option == d.id_option %}
+          {% endif %}
+          <div style="padding:0.5rem 0.75rem; border-radius:var(--radius-sm); font-size:0.875rem;
+               background: {% if opt.is_right == 'Y' %}rgba(45,232,160,0.1){% elif is_selected and opt.is_right == 'N' %}rgba(255,107,107,0.1){% else %}var(--surface){% endif %};
+               border: 1px solid {% if opt.is_right == 'Y' %}var(--success){% elif is_selected and opt.is_right == 'N' %}var(--danger){% else %}var(--border){% endif %};
+               color:var(--text);">
+            {% if opt.is_right == 'Y' %}✓ {% endif %}
+            {% if is_selected and opt.is_right == 'N' %}✗ {% endif %}
+            {{ opt.opt_text }}
+          </div>
+        {% endfor %}
+      </div>
+    {% elif d.q_type in ('TEXT', 'FILL', 'NUMERIC', 'ORDERING', 'MATCHING') %}
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); padding:0.5rem 0.75rem; font-size:0.875rem; margin-bottom:0.5rem;">
+        Ваш ответ: <strong>{{ d.given_text or d.chosen_text or '—' }}</strong>
+      </div>
+    {% endif %}
+
+    {% if d.explanation %}
+      <div style="margin-top:0.75rem; padding:0.6rem 0.75rem; background:rgba(93,109,255,0.06); border-radius:var(--radius-sm); font-size:0.85rem; color:var(--muted); border:1px solid rgba(93,109,255,0.15);">
+        💡 {{ d.explanation }}
+      </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+{% elif attempt.feedback_mode == 'NEVER' %}
+  <div class="card" style="text-align:center; padding:2rem; color:var(--muted);">
+    <p>Детальный разбор недоступен для данного теста.</p>
+  </div>
+{% endif %}
+
+{% endblock %}

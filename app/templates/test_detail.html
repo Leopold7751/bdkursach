@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}{{ test.title }} — QuizPlatform{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{{ test.title }}</h1>
+    {% if test.category %}<p style="margin:0; color:var(--muted);">📁 {{ test.category }}</p>{% endif %}
+  </div>
+  <div class="page-header-actions">
+    <span class="badge {% if test.is_active == 'Y' %}badge-active{% else %}badge-draft{% endif %}">
+      {% if test.is_active == 'Y' %}Активен{% else %}Черновик{% endif %}
+    </span>
+    <a href="{{ url_for('tests_list') }}" class="btn btn-ghost btn-sm">← Назад</a>
+  </div>
+</div>
+
+{% if test.description %}
+  <div class="card" style="margin-bottom:1.5rem;">
+    <p style="margin:0; color:var(--text);">{{ test.description }}</p>
+  </div>
+{% endif %}
+
+<div class="stat-row">
+  <div class="stat-box">
+    <div class="stat-val">{{ questions|length }}</div>
+    <div class="stat-label">Вопросов</div>
+  </div>
+  {% if test.max_score %}
+  <div class="stat-box">
+    <div class="stat-val">{{ test.max_score }}</div>
+    <div class="stat-label">Макс. баллов</div>
+  </div>
+  {% endif %}
+  {% if test.passing_score %}
+  <div class="stat-box">
+    <div class="stat-val">{{ test.passing_score }}</div>
+    <div class="stat-label">Проходной балл</div>
+  </div>
+  {% endif %}
+  {% if test.timer_min %}
+  <div class="stat-box">
+    <div class="stat-val">{{ test.timer_min }}</div>
+    <div class="stat-label">Минут</div>
+  </div>
+  {% endif %}
+  {% if stats and stats.total_attempts %}
+  <div class="stat-box">
+    <div class="stat-val">{{ stats.total_attempts }}</div>
+    <div class="stat-label">Попыток</div>
+  </div>
+  {% if stats.avg_score %}
+  <div class="stat-box">
+    <div class="stat-val">{{ stats.avg_score }}</div>
+    <div class="stat-label">Средний балл</div>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+
+<div style="margin-bottom:1rem;">
+  <p style="font-size:0.875rem; color:var(--muted);">
+    Автор: <strong style="color:var(--text);">{{ test.author }}</strong>
+    &nbsp;·&nbsp; Обратная связь: <strong style="color:var(--text);">{{ test.feedback_mode }}</strong>
+  </p>
+</div>
+
+{% if questions %}
+  <div class="section-title">Вопросы теста</div>
+  <div class="table-wrap" style="margin-bottom:1.5rem;">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Вопрос</th>
+          <th>Тип</th>
+          <th>Сложность</th>
+          <th>Баллы</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for q in questions %}
+        <tr>
+          <td class="mono">{{ q.q_order or loop.index }}</td>
+          <td>{{ q.q_text[:80] }}{% if q.q_text|length > 80 %}…{% endif %}</td>
+          <td><span class="badge badge-draft">{{ q.type_name }}</span></td>
+          <td class="difficulty">{{ '★' * (q.difficulty or 1) }}{{ '☆' * (5 - (q.difficulty or 1)) }}</td>
+          <td class="mono">{{ q.score_weight or q.max_score }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+{% if test.is_active == 'Y' and session.get('user_id') %}
+  <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
+    <form method="POST" action="{{ url_for('start_attempt', test_id=test.id_test) }}">
+      <button type="submit" class="btn btn-success">
+        ▶ Начать тестирование
+      </button>
+    </form>
+    {% if test.timer_min %}
+      <span style="font-size:0.875rem; color:var(--muted);">
+        У вас будет {{ test.timer_min }} минут
+      </span>
+    {% endif %}
+  </div>
+{% elif not session.get('user_id') %}
+  <a href="{{ url_for('login') }}" class="btn btn-primary">Войдите чтобы пройти тест</a>
+{% endif %}
+
+{% endblock %}

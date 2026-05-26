@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Новый вопрос — QuizPlatform{% endblock %}
+
+{% block head %}
+<style>
+  .opt-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.75rem;
+  }
+  .opt-row input[type="text"] { flex: 1; background: transparent; border: none; }
+  .opt-row input[type="text"]:focus { outline: none; }
+  .opt-right-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .opt-right-label input { width: auto; }
+  .remove-opt { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem; padding: 0 0.25rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header">
+  <div><h1>Новый вопрос</h1></div>
+  <a href="{{ url_for('author_questions') }}" class="btn btn-ghost btn-sm">← Банк вопросов</a>
+</div>
+
+<div style="max-width:700px;">
+  <form method="POST" id="q-form">
+    <div class="form-row">
+      <div class="form-group" style="margin:0;">
+        <label>Тип вопроса *</label>
+        <select name="type_code" id="type-select" onchange="handleTypeChange(this.value)" required>
+          {% for t in types %}
+            <option value="{{ t.code }}">{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>Категория</label>
+        <select name="cat_id">
+          <option value="">— без категории —</option>
+          {% for c in cats %}
+            <option value="{{ c.id_category }}">{{ c.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top:1.25rem;">
+      <div class="form-group" style="margin:0;">
+        <label>Сложность *</label>
+        <select name="difficulty" required>
+          <option value="1">1 — Очень лёгкий</option>
+          <option value="2">2 — Лёгкий</option>
+          <option value="3" selected>3 — Средний</option>
+          <option value="4">4 — Сложный</option>
+          <option value="5">5 — Очень сложный</option>
+        </select>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>Максимальный балл *</label>
+        <input type="number" name="max_score" value="1" min="0.5" step="0.5" required>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-top:1.25rem;">
+      <label>Текст вопроса *</label>
+      <textarea name="q_text" rows="3" placeholder="Введите формулировку вопроса…" required></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>Пояснение (для обратной связи)</label>
+      <input type="text" name="explanation" placeholder="Объяснение правильного ответа…">
+    </div>
+
+    <!-- Options section -->
+    <div id="options-section">
+      <hr class="divider">
+      <div class="section-title" id="opts-title">Варианты ответов</div>
+
+      <div id="options-list"></div>
+
+      <div id="add-opt-area">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="addOption()">+ Добавить вариант</button>
+      </div>
+
+      <!-- Text/Numeric answer hint -->
+      <div id="text-hint" style="display:none; background:rgba(93,109,255,0.06); border:1px solid rgba(93,109,255,0.2); border-radius:var(--radius-sm); padding:0.75rem; font-size:0.875rem; color:var(--muted);">
+        Для текстового типа добавьте один вариант с эталонным ответом и отметьте его как правильный.
+        Проверка будет без учёта регистра.
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
+      <button type="submit" class="btn btn-primary">Сохранить вопрос</button>
+      <a href="{{ url_for('author_questions') }}" class="btn btn-ghost">Отмена</a>
+    </div>
+  </form>
+</div>
+
+<script>
+let optCount = 0;
+
+function handleTypeChange(type) {
+  const textHint = document.getElementById('text-hint');
+  const addArea  = document.getElementById('add-opt-area');
+  const title    = document.getElementById('opts-title');
+  const section  = document.getElementById('options-section');
+
+  if (['TEXT','FILL','NUMERIC'].includes(type)) {
+    textHint.style.display = 'block';
+    title.textContent = 'Эталонный ответ';
+    // Clear options, add one text field
+    document.getElementById('options-list').innerHTML = '';
+    optCount = 0;
+    addOption(true);
+    addArea.style.display = 'none';
+  } else if (type === 'MATCHING') {
+    textHint.style.display = 'none';
+    title.textContent = 'Пары соответствия (левый → правый)';
+    document.getElementById('options-list').innerHTML = '';
+    optCount = 0;
+    addMatchingOption();
+    addArea.style.display = '';
+    addArea.querySelector('button').onclick = addMatchingOption;
+  } else {
+    textHint.style.display = 'none';
+    title.textContent = type === 'ORDERING' ? 'Элементы (в правильном порядке)' : 'Варианты ответов';
+    addArea.style.display = '';
+    addArea.querySelector('button').onclick = () => addOption(false);
+  }
+}
+
+function addOption(isRight = false) {
+  optCount++;
+  const n = optCount;
+  const list = document.getElementById('options-list');
+  const div = document.createElement('div');
+  div.className = 'opt-row';
+  div.id = `opt-row-${n}`;
+
+  const type = document.getElementById('type-select').value;
+  const isOrdering = type === 'ORDERING';
+
+  div.innerHTML = `
+    <input type="text" name="opt_text_${n}" placeholder="${isOrdering ? 'Элемент ' + n : 'Вариант ответа…'}" required>
+    ${isOrdering
+      ? `<input type="number" name="opt_pos_${n}" min="1" value="${n}" style="width:60px;" title="Позиция">`
+      : `<label class="opt-right-label">
+           <input type="checkbox" name="opt_right_${n}" ${isRight ? 'checked' : ''}> Верный
+         </label>`
+    }
+    <button type="button" class="remove-opt" onclick="removeOpt('opt-row-${n}')">✕</button>
+  `;
+  list.appendChild(div);
+}
+
+function addMatchingOption() {
+  optCount++;
+  const n = optCount;
+  const list = document.getElementById('options-list');
+  const div = document.createElement('div');
+  div.className = 'opt-row';
+  div.id = `opt-row-${n}`;
+  div.innerHTML = `
+    <input type="hidden" name="opt_right_${n}" value="Y">
+    <input type="text" name="opt_mleft_${n}" placeholder="Левый элемент…" style="flex:1;" required>
+    <span style="color:var(--muted); padding:0 0.4rem; align-self:center;">→</span>
+    <input type="text" name="opt_mright_${n}" placeholder="Правый элемент…" style="flex:1;" required>
+    <input type="text" name="opt_text_${n}" value="пара ${n}" style="display:none;">
+    <button type="button" class="remove-opt" onclick="removeOpt('opt-row-${n}')">✕</button>
+  `;
+  list.appendChild(div);
+}
+
+function removeOpt(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+// Init
+handleTypeChange(document.getElementById('type-select').value);
+if (!document.getElementById('options-list').children.length) {
+  addOption(); addOption(); addOption();
+}
+</script>
+
+{% endblock %}

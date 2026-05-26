@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}QuizPlatform{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #0d0e13;
+      --surface:  #14161f;
+      --card:     #1a1d2a;
+      --border:   #252838;
+      --accent:   #5d6dff;
+      --accent2:  #ff6b6b;
+      --accent3:  #2de8a0;
+      --text:     #e8eaf0;
+      --muted:    #7b7f96;
+      --success:  #2de8a0;
+      --danger:   #ff6b6b;
+      --warning:  #ffd166;
+      --radius:   12px;
+      --radius-sm:6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* ── NAV ── */
+    nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.25rem;
+      color: var(--accent);
+      text-decoration: none;
+      letter-spacing: -0.02em;
+    }
+    .nav-brand span { color: var(--accent3); }
+    .nav-links { display: flex; gap: 0.25rem; align-items: center; }
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      padding: 0.4rem 0.9rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .nav-links a:hover { color: var(--text); background: var(--card); }
+    .nav-links a.active { color: var(--accent); }
+    .nav-badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 99px;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      margin-left: 0.25rem;
+      vertical-align: middle;
+    }
+
+    /* ── MAIN ── */
+    main {
+      flex: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+      padding: 2rem 1.5rem;
+    }
+
+    /* ── FLASH ── */
+    .alerts { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+    .alert {
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.875rem;
+      border-left: 3px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .alert-success { background: rgba(45,232,160,0.1); border-color: var(--success); color: var(--success); }
+    .alert-danger  { background: rgba(255,107,107,0.1); border-color: var(--danger);  color: var(--danger); }
+    .alert-warning { background: rgba(255,209,102,0.1); border-color: var(--warning); color: var(--warning); }
+    .alert-info    { background: rgba(93,109,255,0.1);  border-color: var(--accent);  color: var(--accent); }
+
+    /* ── TYPOGRAPHY ── */
+    h1 { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem; }
+    h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.75rem; }
+    h3 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; }
+    p  { color: var(--muted); margin-bottom: 0.75rem; }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      transition: border-color 0.2s;
+    }
+    .card:hover { border-color: #353850; }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1.1rem;
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 0.875rem;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .btn-primary   { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #4d5de8; }
+    .btn-success   { background: var(--success); color: #0d0e13; }
+    .btn-success:hover { background: #25d090; }
+    .btn-danger    { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid rgba(255,107,107,0.3); }
+    .btn-danger:hover  { background: rgba(255,107,107,0.25); }
+    .btn-ghost     { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: #353850; }
+    .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.8rem; }
+
+    /* ── FORMS ── */
+    .form-group { margin-bottom: 1.25rem; }
+    label { display: block; font-size: 0.8rem; font-weight: 500; color: var(--muted); margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    input[type="text"], input[type="password"], input[type="number"],
+    input[type="email"], textarea, select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.9rem;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 80px; }
+    select option { background: var(--surface); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+    /* ── TABLES ── */
+    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: var(--surface);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* ── BADGES ── */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.7rem;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+    }
+    .badge-active  { background: rgba(45,232,160,0.15); color: var(--success); }
+    .badge-draft   { background: rgba(123,127,150,0.15); color: var(--muted); }
+    .badge-pass    { background: rgba(45,232,160,0.15); color: var(--success); }
+    .badge-fail    { background: rgba(255,107,107,0.15); color: var(--danger); }
+    .badge-pending { background: rgba(255,209,102,0.15); color: var(--warning); }
+    .badge-progress{ background: rgba(93,109,255,0.15); color: var(--accent); }
+
+    /* ── PROGRESS ── */
+    .progress-bar {
+      height: 6px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+      margin-top: 0.5rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      border-radius: 99px;
+      transition: width 0.6s ease;
+    }
+
+    /* ── DIFFICULTY STARS ── */
+    .difficulty { color: var(--warning); font-size: 0.8rem; }
+
+    /* ── STAT BOXES ── */
+    .stat-row { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .stat-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.25rem;
+      flex: 1;
+      min-width: 120px;
+    }
+    .stat-box .stat-val {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .stat-box .stat-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── PAGE HEADER ── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .page-header-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--muted);
+    }
+    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 1rem 2rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* ── MONO ── */
+    .mono { font-family: 'DM Mono', monospace; }
+
+    /* ── DIVIDER ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+    /* ── CHECKBOX OPTION CARDS ── */
+    .option-cards { display: flex; flex-direction: column; gap: 0.5rem; }
+    .option-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .option-card:hover { border-color: var(--accent); }
+    .option-card.selected { border-color: var(--accent); background: rgba(93,109,255,0.08); }
+    .option-card.correct  { border-color: var(--success); background: rgba(45,232,160,0.08); }
+    .option-card.wrong    { border-color: var(--danger);  background: rgba(255,107,107,0.08); }
+    .option-card input { width: auto; }
+
+    /* ── TIMER ── */
+    .timer-display {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.5rem;
+      font-weight: 500;
+      color: var(--accent3);
+    }
+    .timer-display.danger { color: var(--danger); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    @media (max-width: 640px) {
+      .form-row, .form-row-3 { grid-template-columns: 1fr; }
+      .card-grid { grid-template-columns: 1fr; }
+      nav { padding: 0 1rem; }
+      main { padding: 1.25rem 1rem; }
+    }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <nav>
+    <a href="{{ url_for('index') }}" class="nav-brand">Quiz<span>.</span>Platform</a>
+    <div class="nav-links">
+      <a href="{{ url_for('tests_list') }}">Тесты</a>
+      {% if session.get('user_id') %}
+        <a href="{{ url_for('my_attempts') }}">Мои попытки</a>
+        {% if session.get('role') in ('author','admin') %}
+          <a href="{{ url_for('author_tests') }}">Мои тесты</a>
+          <a href="{{ url_for('author_questions') }}">Банк вопросов</a>
+          <a href="{{ url_for('platform_stats') }}">Статистика</a>
+        {% endif %}
+        <a href="{{ url_for('logout') }}" class="btn btn-ghost btn-sm" style="margin-left:0.5rem">
+          Выйти ({{ session.get('display_name','') }})
+        </a>
+      {% else %}
+        <a href="{{ url_for('login') }}" class="btn btn-ghost btn-sm">Войти</a>
+        <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">Регистрация</a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <main>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="alerts">
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer>
+    QuizPlatform — Oracle DB + Flask &nbsp;·&nbsp; РГУ нефти и газа им. И.М. Губкина &nbsp;·&nbsp; 2026
+  </footer>
+</body>
+</html>

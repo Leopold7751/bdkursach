@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  # ── Oracle XE 21c ─────────────────────────────────────────────────────────
+  oracle:
+    image: gvenzl/oracle-xe:21-slim-faststart
+    container_name: quiz_oracle
+    restart: unless-stopped
+    environment:
+      ORACLE_PASSWORD: oracle          # пароль SYS / SYSTEM
+      ORACLE_DATABASE: XEPDB1
+      APP_USER: quiz_user              # создаст схему quiz_user
+      APP_USER_PASSWORD: quiz_pass
+    ports:
+      - "1521:1521"
+    volumes:
+      - oracle_data:/opt/oracle/oradata
+      # SQL-скрипты запускаются при первом старте контейнера
+      - ./sql:/container-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "healthcheck.sh"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # ── Flask-приложение ───────────────────────────────────────────────────────
+  webapp:
+    build: ./app
+    #platform: linux/amd64
+    container_name: quiz_webapp
+    restart: unless-stopped
+    environment:
+      DB_USER:     quiz_user
+      DB_PASSWORD: quiz_pass
+      DB_HOST:     oracle
+      DB_PORT:     1521
+      DB_SERVICE:  XEPDB1
+      FLASK_ENV:   development
+    ports:
+      - "5000:5000"
+    depends_on:
+      oracle:
+        condition: service_healthy
+    volumes:
+      - ./app:/app   # hot-reload в dev-режиме
+
+volumes:
+  oracle_data:

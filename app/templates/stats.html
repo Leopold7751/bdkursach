@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Статистика платформы{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Статистика платформы</h1>
+    <p style="margin:0; color:var(--muted);">Агрегированные данные по всем тестам</p>
+  </div>
+</div>
+
+<!-- Общая сводка -->
+{% if overview %}
+<div class="stat-row" style="margin-bottom:1.5rem;">
+  <div class="stat-box">
+    <div class="stat-val" style="color:var(--accent)">{{ overview.active_tests or 0 }}</div>
+    <div class="stat-label">Активных тестов</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val">{{ overview.total_users or 0 }}</div>
+    <div class="stat-label">Пользователей</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val">{{ overview.total_attempts or 0 }}</div>
+    <div class="stat-label">Всего попыток</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val">{{ overview.completed_attempts or 0 }}</div>
+    <div class="stat-label">Завершённых</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val" style="color:var(--success)">{{ overview.passed_attempts or 0 }}</div>
+    <div class="stat-label">Зачётов</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Графики -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem; align-items:start;">
+  {% if charts.get('pass_fail') %}
+  <div class="card" style="text-align:center;">
+    <h3 style="margin-bottom:1rem;">Зачёт / Незачёт (все тесты)</h3>
+    <img src="data:image/png;base64,{{ charts.pass_fail }}"
+         alt="Pass/Fail" style="max-width:100%; border-radius:8px;">
+  </div>
+  {% endif %}
+  {% if charts.get('tests_bar') %}
+  <div class="card" style="text-align:center;">
+    <h3 style="margin-bottom:1rem;">Популярность тестов</h3>
+    <img src="data:image/png;base64,{{ charts.tests_bar }}"
+         alt="Tests popularity" style="max-width:100%; border-radius:8px;">
+  </div>
+  {% endif %}
+</div>
+
+<!-- Список тестов с кратким итогом -->
+{% if tests %}
+<h2 style="margin-bottom:1rem;">Активные тесты</h2>
+<div style="display:flex; flex-direction:column; gap:0.5rem;">
+  {% for t in tests %}
+  <div class="card" style="padding:1rem;
+       display:flex; align-items:center; justify-content:space-between; gap:1rem;">
+    <div>
+      <div style="font-weight:500; color:var(--text);">{{ t.title }}</div>
+    </div>
+    <div style="display:flex; gap:2rem; align-items:center; flex-shrink:0;">
+      <div style="text-align:center;">
+        <div style="font-family:'Syne',sans-serif; font-size:1.25rem; font-weight:700;">
+          {{ t.attempt_count or 0 }}
+        </div>
+        <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">попыток</div>
+      </div>
+      {% if (t.pass_count or 0) + (t.fail_count or 0) > 0 %}
+      <div style="text-align:center;">
+        <div style="font-weight:600; color:var(--success);">{{ t.pass_count or 0 }}</div>
+        <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">зачёт</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-weight:600; color:var(--danger);">{{ t.fail_count or 0 }}</div>
+        <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em;">незачёт</div>
+      </div>
+      {% endif %}
+      <a href="{{ url_for('test_stats_view', test_id=t.id_test) }}"
+         class="btn btn-ghost btn-sm">Подробнее →</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="text-align:center; padding:3rem; color:var(--muted);">
+  <p>Нет активных тестов.</p>
+</div>
+{% endif %}
+
+{% endblock %}

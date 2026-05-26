@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Банк вопросов — QuizPlatform{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Банк вопросов</h1>
+    <p style="margin:0;">{{ questions|length }} вопросов</p>
+  </div>
+  <a href="{{ url_for('author_question_new') }}" class="btn btn-primary">+ Новый вопрос</a>
+</div>
+
+<!-- Filter -->
+<div style="margin-bottom:1rem;">
+  <input type="text" id="q-filter" placeholder="Поиск по тексту вопроса…"
+         oninput="filterQ(this.value)" style="max-width:400px;">
+</div>
+
+{% if questions %}
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Вопрос</th>
+          <th>Тип</th>
+          <th>Категория</th>
+          <th>Сложность</th>
+          <th>Баллов</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="q-table-body">
+        {% for q in questions %}
+        <tr class="q-row" data-text="{{ q.q_text.lower() }}">
+          <td class="mono">{{ q.id_question }}</td>
+          <td>
+            <div style="font-weight:500; max-width:400px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              {{ q.q_text }}
+            </div>
+            {% if q.explanation %}
+              <div style="font-size:0.75rem; color:var(--muted); margin-top:0.2rem;">
+                💡 {{ q.explanation[:60] }}{% if q.explanation|length > 60 %}…{% endif %}
+              </div>
+            {% endif %}
+          </td>
+          <td><span class="badge badge-draft">{{ q.type_name }}</span></td>
+          <td style="font-size:0.875rem; color:var(--muted);">{{ q.category or '—' }}</td>
+          <td class="difficulty">
+            {{ '★' * (q.difficulty or 1) }}{{ '☆' * (5 - (q.difficulty or 1)) }}
+          </td>
+          <td class="mono">{{ q.max_score }}</td>
+          <td>
+            <form method="POST" action="{{ url_for('author_delete_question', q_id=q.id_question) }}"
+                  onsubmit="return confirm('Удалить вопрос? Он будет удалён из всех тестов.')">
+              <button class="btn btn-danger btn-sm">Удалить</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% else %}
+  <div class="empty-state">
+    <div class="empty-icon">❓</div>
+    <p>Нет вопросов в банке.</p>
+    <a href="{{ url_for('author_question_new') }}" class="btn btn-primary">Создать вопрос</a>
+  </div>
+{% endif %}
+
+<script>
+function filterQ(val) {
+  const q = val.toLowerCase();
+  document.querySelectorAll('.q-row').forEach(r => {
+    r.style.display = r.dataset.text.includes(q) ? '' : 'none';
+  });
+}
+</script>
+
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Статистика: {{ test.title }}{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Статистика теста</h1>
+    <p style="margin:0; color:var(--muted);">{{ test.title }}</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{{ url_for('author_test_edit', test_id=test.id_test) }}" class="btn btn-ghost btn-sm">← Редактор</a>
+    <a href="{{ url_for('author_tests') }}" class="btn btn-ghost btn-sm">Мои тесты</a>
+  </div>
+</div>
+
+{% if stats and stats.total_attempts %}
+
+<!-- Сводные показатели -->
+<div class="stat-row" style="margin-bottom:1.5rem;">
+  <div class="stat-box">
+    <div class="stat-val">{{ stats.total_attempts }}</div>
+    <div class="stat-label">Попыток</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val" style="color:var(--success)">{{ stats.passed or 0 }}</div>
+    <div class="stat-label">Зачётов</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-val" style="color:var(--danger)">{{ stats.failed or 0 }}</div>
+    <div class="stat-label">Незачётов</div>
+  </div>
+  {% if stats.avg_score is not none %}
+  <div class="stat-box">
+    <div class="stat-val">{{ stats.avg_score }}</div>
+    <div class="stat-label">Ср. балл</div>
+  </div>
+  {% endif %}
+  {% if stats.max_score_res is not none %}
+  <div class="stat-box">
+    <div class="stat-val" style="color:var(--accent)">{{ stats.max_score_res }}</div>
+    <div class="stat-label">Макс. балл</div>
+  </div>
+  {% endif %}
+  {% if stats.min_score_res is not none %}
+  <div class="stat-box">
+    <div class="stat-val" style="color:var(--muted)">{{ stats.min_score_res }}</div>
+    <div class="stat-label">Мин. балл</div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Графики (верхний ряд: пирог + гистограмма) -->
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem;">
+  {% if charts.get('pass_fail') %}
+  <div class="card" style="text-align:center;">
+    <h3 style="margin-bottom:1rem;">Зачёт / Незачёт</h3>
+    <img src="data:image/png;base64,{{ charts.pass_fail }}"
+         alt="Pass/Fail" style="max-width:100%; border-radius:8px;">
+  </div>
+  {% endif %}
+  {% if charts.get('histogram') %}
+  <div class="card" style="text-align:center;">
+    <h3 style="margin-bottom:1rem;">Распределение баллов</h3>
+    <img src="data:image/png;base64,{{ charts.histogram }}"
+         alt="Score distribution" style="max-width:100%; border-radius:8px;">
+  </div>
+  {% endif %}
+</div>
+
+<!-- Правильность по вопросам -->
+{% if charts.get('q_bar') %}
+<div class="card" style="margin-bottom:1.5rem; text-align:center;">
+  <h3 style="margin-bottom:1rem;">Правильность ответов по вопросам</h3>
+  <img src="data:image/png;base64,{{ charts.q_bar }}"
+       alt="Question correctness" style="max-width:100%; border-radius:8px;">
+</div>
+{% endif %}
+
+<!-- Детальная таблица вопросов -->
+{% if q_data %}
+<h2 style="margin-bottom:1rem;">Детали по вопросам</h2>
+<div class="card" style="padding:0; overflow:hidden;">
+  {% for i in range(q_data|length) %}
+  {% set r = q_data[i] %}
+  <div style="display:grid; grid-template-columns:40px 1fr 80px 80px 140px;
+              align-items:center; gap:1rem; padding:0.8rem 1.25rem;
+              border-bottom:1px solid var(--border);
+              {% if loop.last %}border-bottom:none;{% endif %}">
+    <div class="mono" style="color:var(--muted); font-size:0.85rem;">В{{ i+1 }}</div>
+    <div style="font-size:0.875rem; color:var(--text);">{{ r.q_short }}</div>
+    <div style="text-align:center;">
+      <div style="font-weight:600; color:var(--text);">{{ r.total_answered }}</div>
+      <div style="font-size:0.7rem; color:var(--muted);">ответов</div>
+    </div>
+    <div style="text-align:center;">
+      <div style="font-weight:600; color:var(--success);">{{ r.correct_count }}</div>
+      <div style="font-size:0.7rem; color:var(--muted);">верно</div>
+    </div>
+    <div>
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+        <div class="progress-bar" style="flex:1; height:6px;">
+          <div class="progress-fill"
+               style="width:{{ r.pct_correct or 0 }}%;
+                      background:{% if (r.pct_correct or 0) >= 70 %}var(--success){% elif (r.pct_correct or 0) >= 40 %}var(--warning){% else %}var(--danger){% endif %};">
+          </div>
+        </div>
+        <span class="mono" style="font-size:0.8rem; min-width:38px; text-align:right;">
+          {{ r.pct_correct or 0 }}%
+        </span>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="card" style="text-align:center; padding:3rem; color:var(--muted);">
+  <div style="font-size:3rem; margin-bottom:1rem;">📊</div>
+  <p style="font-size:1.1rem; margin-bottom:0.25rem; color:var(--text);">Нет данных</p>
+  <p>По этому тесту ещё не было завершённых попыток.</p>
+</div>
+{% endif %}
+
+{% endblock %}

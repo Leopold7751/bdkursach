@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{% if test %}Редактировать{% else %}Новый тест{% endif %} — QuizPlatform{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>{% if test %}Редактировать тест{% else %}Новый тест{% endif %}</h1>
+  </div>
+  <a href="{{ url_for('author_tests') }}" class="btn btn-ghost btn-sm">← Назад</a>
+</div>
+
+<div class="card" style="max-width:680px;">
+  <form method="POST">
+    <div class="form-group">
+      <label>Название теста *</label>
+      <input type="text" name="title" value="{{ test.title if test else '' }}"
+             placeholder="Основы SQL" required>
+    </div>
+
+    <div class="form-group">
+      <label>Описание</label>
+      <textarea name="description" placeholder="Краткое описание теста…">{{ test.description if test else '' }}</textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group" style="margin:0;">
+        <label>Максимальный балл *</label>
+        <input type="number" name="max_score" step="0.5" min="1"
+               value="{{ test.max_score if test else '10' }}" required>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>Проходной балл</label>
+        <input type="number" name="pass_score" step="0.5" min="0"
+               value="{{ test.passing_score if test else '' }}"
+               placeholder="Оставьте пустым — без порога">
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top:1.25rem;">
+      <div class="form-group" style="margin:0;">
+        <label>Таймер (минут)</label>
+        <input type="number" name="timer_min" min="1" max="1440"
+               value="{{ test.timer_min if test else '' }}"
+               placeholder="Без ограничений">
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label>Режим обратной связи *</label>
+        <select name="mode_code" required>
+          {% for m in modes %}
+            <option value="{{ m.code }}"
+              {% if test and test.feedback_code == m.code %}selected{% endif %}>
+              {{ m.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row" style="margin-top:1.25rem;">
+      <div class="form-group" style="margin:0;">
+        <label>Категория</label>
+        <select name="cat_id">
+          <option value="">— без категории —</option>
+          {% for c in cats %}
+            <option value="{{ c.id_category }}"
+              {% if test and test.category == c.name %}selected{% endif %}>
+              {{ c.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group" style="margin:0; display:flex; align-items:flex-end;">
+        <label style="display:flex; gap:0.5rem; align-items:center; cursor:pointer; margin-bottom:0; width:100%; padding:0.6rem 0.9rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm);">
+          <input type="checkbox" name="shuffle" value="Y" style="width:auto;"
+                 {% if test and test.shuffle_q == 'Y' %}checked{% endif %}>
+          <span>Перемешивать вопросы</span>
+        </label>
+      </div>
+    </div>
+
+    <hr class="divider" style="margin:1.5rem 0;">
+
+    <button type="submit" class="btn btn-primary">
+      {% if test %}Сохранить изменения{% else %}Создать тест{% endif %}
+    </button>
+  </form>
+</div>
+
+{% endblock %}

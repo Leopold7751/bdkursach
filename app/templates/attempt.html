@@ -1,0 +1,347 @@
+{% extends "base.html" %}
+{% block title %}Тест: {{ attempt.test_title }}{% endblock %}
+
+{% block head %}
+<style>
+  .question-nav {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .q-nav-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .q-nav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .q-nav-btn.answered { background: rgba(93,109,255,0.15); border-color: var(--accent); color: var(--accent); }
+  .q-nav-btn.current  { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  .question-card {
+    display: none;
+    animation: fadeIn 0.2s ease;
+  }
+  .question-card.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+  .answer-area { margin-top: 1rem; }
+
+  .option-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.8rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 0.5rem;
+  }
+  .option-label:hover { border-color: var(--accent); }
+  .option-label input { margin-top: 0.15rem; flex-shrink: 0; width: auto; }
+  .option-label.checked { border-color: var(--accent); background: rgba(93,109,255,0.08); }
+
+  .save-btn-row {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .saved-indicator {
+    font-size: 0.8rem;
+    color: var(--success);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .saved-indicator.show { opacity: 1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header with timer -->
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+  <div>
+    <h1 style="font-size:1.5rem; margin-bottom:0.25rem;">{{ attempt.test_title }}</h1>
+    <p style="margin:0; font-size:0.875rem; color:var(--muted);">
+      Попытка #<span class="mono">{{ attempt.id_attempt }}</span>
+      &nbsp;·&nbsp; {{ questions|length }} вопросов
+    </p>
+  </div>
+  <div style="display:flex; align-items:center; gap:1.5rem;">
+    {% if attempt.timer_min %}
+      <div>
+        <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:0.2rem;">Осталось</div>
+        <div class="timer-display" id="timer">--:--</div>
+      </div>
+    {% endif %}
+    <form method="POST" action="{{ url_for('finish_attempt', attempt_id=attempt.id_attempt) }}"
+          onsubmit="return confirm('Завершить тестирование?')">
+      <input type="hidden" name="reason" value="MANUAL">
+      <button type="submit" class="btn btn-danger">Завершить →</button>
+    </form>
+  </div>
+</div>
+
+<!-- Progress -->
+<div style="margin-bottom:1.5rem;">
+  <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:var(--muted); margin-bottom:0.4rem;">
+    <span>Прогресс</span>
+    <span id="progress-text">0 / {{ questions|length }}</span>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<!-- Question navigation -->
+<div class="question-nav" id="q-nav">
+  {% for q in questions %}
+    <button class="q-nav-btn {% if loop.index == 1 %}current{% endif %}
+                  {% if q.given_text or q.chosen_option %}answered{% endif %}"
+            data-idx="{{ loop.index0 }}"
+            onclick="showQuestion({{ loop.index0 }})">
+      {{ loop.index }}
+    </button>
+  {% endfor %}
+</div>
+
+<!-- Question cards -->
+{% for q in questions %}
+<div class="question-card {% if loop.first %}active{% endif %}"
+     data-idx="{{ loop.index0 }}"
+     data-qid="{{ q.id_question }}"
+     data-type="{{ q.q_type }}">
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; margin-bottom:1rem;">
+      <div style="font-size:0.75rem; color:var(--muted); font-family:'DM Mono',monospace; text-transform:uppercase; letter-spacing:0.08em;">
+        Вопрос {{ loop.index }} из {{ questions|length }}
+        &nbsp;·&nbsp; {{ q.type_name or q.q_type }}
+        &nbsp;·&nbsp; Баллов: {{ q.max_score }}
+        <span class="difficulty" style="margin-left:0.5rem;">{{ '★' * (q.difficulty or 1) }}</span>
+      </div>
+      <div id="saved-{{ q.id_question }}" class="saved-indicator">✓ Сохранено</div>
+    </div>
+
+    <div style="font-size:1.05rem; font-weight:500; color:var(--text); margin-bottom:1.25rem; line-height:1.5;">
+      {{ q.q_text }}
+    </div>
+
+    <div class="answer-area">
+
+      {% if q.q_type == 'SINGLE' %}
+        <div id="opts-{{ q.id_question }}">
+          {% for opt in options_map.get(q.id_question, []) %}
+            <label class="option-label {% if q.chosen_option == opt.id_option %}checked{% endif %}"
+                   id="lbl-{{ opt.id_option }}">
+              <input type="radio"
+                     name="opt-{{ q.id_question }}"
+                     value="{{ opt.id_option }}"
+                     {% if q.chosen_option == opt.id_option %}checked{% endif %}
+                     onchange="saveAnswer({{ q.id_question }}, {{ opt.id_option }}, null)">
+              {{ opt.opt_text }}
+            </label>
+          {% endfor %}
+        </div>
+
+      {% elif q.q_type == 'MULTI' %}
+        <p style="font-size:0.8rem; color:var(--muted); margin-bottom:0.5rem;">Выберите все верные ответы.</p>
+        <div id="opts-{{ q.id_question }}">
+          {% for opt in options_map.get(q.id_question, []) %}
+            {% set pre_checked = q.given_text and opt.id_option|string in q.given_text.split(',') %}
+            <label class="option-label {% if pre_checked %}checked{% endif %}"
+                   id="lbl-{{ opt.id_option }}">
+              <input type="checkbox"
+                     class="multi-cb"
+                     name="opt-{{ q.id_question }}-{{ opt.id_option }}"
+                     value="{{ opt.id_option }}"
+                     {% if pre_checked %}checked{% endif %}
+                     onchange="saveMultiAnswer({{ q.id_question }})">
+              {{ opt.opt_text }}
+            </label>
+          {% endfor %}
+        </div>
+
+      {% elif q.q_type in ('TEXT', 'FILL', 'NUMERIC') %}
+        <input type="{{ 'number' if q.q_type == 'NUMERIC' else 'text' }}"
+               id="text-{{ q.id_question }}"
+               placeholder="{% if q.q_type == 'NUMERIC' %}Введите число…{% else %}Введите ответ…{% endif %}"
+               value="{{ q.given_text or '' }}"
+               style="max-width:400px;"
+               onblur="saveAnswer({{ q.id_question }}, null, this.value)">
+        <div class="save-btn-row">
+          <button class="btn btn-ghost btn-sm"
+                  onclick="saveAnswer({{ q.id_question }}, null, document.getElementById('text-{{ q.id_question }}').value)">
+            Сохранить
+          </button>
+        </div>
+
+      {% else %}
+        <p style="color:var(--muted); font-style:italic; font-size:0.875rem;">Тип «{{ q.q_type }}» — введите ответ:</p>
+        <textarea id="text-{{ q.id_question }}" rows="3" style="max-width:500px;"
+                  onblur="saveAnswer({{ q.id_question }}, null, this.value)">{{ q.given_text or '' }}</textarea>
+        <div class="save-btn-row">
+          <button class="btn btn-ghost btn-sm"
+                  onclick="saveAnswer({{ q.id_question }}, null, document.getElementById('text-{{ q.id_question }}').value)">
+            Сохранить
+          </button>
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- Navigation buttons -->
+  <div style="display:flex; justify-content:space-between; margin-top:1rem;">
+    <button class="btn btn-ghost" onclick="prevQuestion()" {% if loop.first %}disabled{% endif %}>← Назад</button>
+    <button class="btn btn-primary" onclick="nextQuestion()" {% if loop.last %}style="display:none"{% endif %}>Далее →</button>
+  </div>
+</div>
+{% endfor %}
+
+<!-- Timer + JS -->
+<script>
+const ATTEMPT_ID = {{ attempt.id_attempt }};
+const TOTAL_Q    = {{ questions|length }};
+let currentIdx   = 0;
+let answeredSet  = new Set(
+  [{% for q in questions %}{% if q.given_text or q.chosen_option %}{{ loop.index0 }},{% endif %}{% endfor %}]
+);
+
+{% if attempt.timer_min %}
+const TIMER_MIN   = {{ attempt.timer_min }};
+const START_TIME  = new Date("{{ attempt.start_time }}").getTime();
+let timerInterval = null;
+
+function startTimer() {
+  const endMs = START_TIME + TIMER_MIN * 60 * 1000;
+  timerInterval = setInterval(() => {
+    const left = Math.max(0, endMs - Date.now());
+    const m = Math.floor(left / 60000);
+    const s = Math.floor((left % 60000) / 1000);
+    const el = document.getElementById('timer');
+    el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    if (left < 60000) el.classList.add('danger');
+    if (left === 0) {
+      clearInterval(timerInterval);
+      // Авто-завершение
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/attempt/{{ attempt.id_attempt }}/finish';
+      const inp = document.createElement('input');
+      inp.name = 'reason'; inp.value = 'TIME_EXPIRED'; inp.type = 'hidden';
+      form.appendChild(inp);
+      document.body.appendChild(form);
+      form.submit();
+    }
+  }, 1000);
+}
+startTimer();
+{% endif %}
+
+function updateProgress() {
+  const pct = Math.round(answeredSet.size / TOTAL_Q * 100);
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = answeredSet.size + ' / ' + TOTAL_Q;
+}
+
+function showQuestion(idx) {
+  document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.q-nav-btn').forEach(b => {
+    b.classList.remove('current');
+    if (answeredSet.has(parseInt(b.dataset.idx))) b.classList.add('answered');
+    else b.classList.remove('answered');
+  });
+  document.querySelector(`.question-card[data-idx="${idx}"]`).classList.add('active');
+  document.querySelector(`.q-nav-btn[data-idx="${idx}"]`).classList.add('current');
+  currentIdx = idx;
+}
+
+function nextQuestion() {
+  if (currentIdx < TOTAL_Q - 1) showQuestion(currentIdx + 1);
+}
+function prevQuestion() {
+  if (currentIdx > 0) showQuestion(currentIdx - 1);
+}
+
+function saveMultiAnswer(qId) {
+  const checked = document.querySelectorAll(
+    `.question-card[data-qid="${qId}"] input.multi-cb:checked`
+  );
+  const ids = Array.from(checked).map(cb => cb.value);
+
+  // Update visual highlighting for all options in this question
+  document.querySelectorAll(`.question-card[data-qid="${qId}"] .option-label`)
+    .forEach(lbl => {
+      const cb = lbl.querySelector('input.multi-cb');
+      if (cb) {
+        if (cb.checked) lbl.classList.add('checked');
+        else lbl.classList.remove('checked');
+      }
+    });
+
+  if (ids.length > 0) {
+    saveAnswer(qId, null, ids.join(','));
+  } else {
+    // Nothing selected — mark as unanswered
+    answeredSet.delete(currentIdx);
+    const navBtn = document.querySelector(`.q-nav-btn[data-idx="${currentIdx}"]`);
+    if (navBtn) navBtn.classList.remove('answered');
+    updateProgress();
+  }
+}
+
+async function saveAnswer(qId, optionId, text) {
+  const formData = new FormData();
+  formData.append('q_id', qId);
+  if (optionId) formData.append('option_id', optionId);
+  if (text !== null && text !== undefined && text !== '') formData.append('text', text);
+
+  try {
+    const r = await fetch(`/attempt/${ATTEMPT_ID}/answer`, {
+      method: 'POST', body: formData
+    });
+    if (r.ok) {
+      // Mark as answered
+      answeredSet.add(currentIdx);
+      const navBtn = document.querySelector(`.q-nav-btn[data-idx="${currentIdx}"]`);
+      if (navBtn) navBtn.classList.add('answered');
+      updateProgress();
+
+      // Flash "saved"
+      const ind = document.getElementById(`saved-${qId}`);
+      if (ind) {
+        ind.classList.add('show');
+        setTimeout(() => ind.classList.remove('show'), 1500);
+      }
+
+      // Highlight selected option label
+      if (optionId) {
+        document.querySelectorAll(`label[id^="lbl-"]`).forEach(l => {
+          if (l.closest(`[data-qid="${qId}"]`)) l.classList.remove('checked');
+        });
+        const lbl = document.getElementById(`lbl-${optionId}`);
+        if (lbl) lbl.classList.add('checked');
+      }
+    }
+  } catch(e) { console.error(e); }
+}
+
+updateProgress();
+</script>
+
+{% endblock %}
