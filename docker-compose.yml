@@ -4,6 +4,7 @@ services:
   # ── Oracle XE 21c ─────────────────────────────────────────────────────────
   oracle:
     image: gvenzl/oracle-xe:21-slim-faststart
+    platform: linux/amd64
     container_name: quiz_oracle
     restart: unless-stopped
     environment:
@@ -27,7 +28,6 @@ services:
   # ── Flask-приложение ───────────────────────────────────────────────────────
   webapp:
     build: ./app
-    platform: linux/amd64
     container_name: quiz_webapp
     restart: unless-stopped
     environment:

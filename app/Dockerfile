@@ -1,15 +1,9 @@
-FROM --platform=linux/amd64 python:3.12-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        gcc python3-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir flask matplotlib && \
-    pip install --no-cache-dir python-oracledb
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
