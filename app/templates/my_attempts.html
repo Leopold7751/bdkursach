@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Мои попытки{% endblock %}
+{% block content %}
+
+<div class="page-header">
+  <div>
+    <h1>Мои попытки</h1>
+    <p style="margin:0; color:var(--muted);">История прохождения тестов</p>
+  </div>
+  <div class="page-header-actions">
+    <a href="{{ url_for('tests_list') }}" class="btn btn-primary btn-sm">Пройти тест</a>
+  </div>
+</div>
+
+{% if attempts %}
+<div style="display:flex; flex-direction:column; gap:0.5rem;">
+  {% for a in attempts %}
+  <div class="card" style="padding:1rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+
+    <!-- Название теста -->
+    <div style="flex:1; min-width:180px;">
+      <div style="font-weight:500; color:var(--text); margin-bottom:0.2rem;">{{ a.test_title }}</div>
+      <div style="font-size:0.75rem; color:var(--muted); font-family:'DM Mono',monospace;">
+        {{ a.start_time.strftime('%d.%m.%Y %H:%M') if a.start_time else '—' }}
+      </div>
+    </div>
+
+    <!-- Статус / результат -->
+    <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+
+      {% if a.status_code == 'COMPLETED' %}
+        {% if a.result_code == 'PASS' %}
+          <span class="badge badge-pass">ЗАЧЁТ</span>
+        {% elif a.result_code == 'FAIL' %}
+          <span class="badge badge-fail">НЕЗАЧЁТ</span>
+        {% else %}
+          <span class="badge badge-pending">{{ a.status_name }}</span>
+        {% endif %}
+      {% elif a.status_code == 'IN_PROGRESS' %}
+        <span class="badge badge-progress">В процессе</span>
+      {% else %}
+        <span class="badge badge-draft">{{ a.status_name }}</span>
+      {% endif %}
+
+      <!-- Баллы -->
+      {% if a.score is not none %}
+      <div style="text-align:right; font-family:'DM Mono',monospace; font-size:0.85rem;">
+        <span style="color:{% if a.result_code == 'PASS' %}var(--success){% elif a.result_code == 'FAIL' %}var(--danger){% else %}var(--text){% endif %}; font-weight:600;">
+          {{ a.score }}
+        </span>
+        {% if a.max_score %}<span style="color:var(--muted);"> / {{ a.max_score }}</span>{% endif %}
+        {% if a.passing_score %}
+        <div style="font-size:0.7rem; color:var(--muted);">порог {{ a.passing_score }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Длительность -->
+      {% if a.end_time and a.start_time %}
+      <div style="font-size:0.75rem; color:var(--muted); font-family:'DM Mono',monospace; min-width:50px; text-align:right;">
+        {% set delta = (a.end_time - a.start_time).seconds %}
+        {% set mins = delta // 60 %}{% set secs = delta % 60 %}
+        {{ '%d:%02d'|format(mins, secs) }}
+      </div>
+      {% endif %}
+
+      <!-- Ссылка на разбор -->
+      {% if a.status_code == 'COMPLETED' %}
+      <a href="{{ url_for('results_view', attempt_id=a.id_attempt) }}"
+         class="btn btn-ghost btn-sm">Разбор →</a>
+      {% endif %}
+
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card" style="text-align:center; padding:3rem; color:var(--muted);">
+  <div style="font-size:3rem; margin-bottom:1rem; opacity:0.4;">📝</div>
+  <p style="font-size:1.1rem; color:var(--text); margin-bottom:0.5rem;">Попыток пока нет</p>
+  <p style="margin-bottom:1.5rem;">Пройдите первый тест, чтобы увидеть историю здесь.</p>
+  <a href="{{ url_for('tests_list') }}" class="btn btn-primary">Перейти к тестам</a>
+</div>
+{% endif %}
+
+{% endblock %}
