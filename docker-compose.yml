@@ -27,7 +27,7 @@ services:
   # ── Flask-приложение ───────────────────────────────────────────────────────
   webapp:
     build: ./app
-    #platform: linux/amd64
+    platform: linux/amd64
     container_name: quiz_webapp
     restart: unless-stopped
     environment:
